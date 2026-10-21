@@ -1,100 +1,199 @@
 package com.example.appmcmovilcare_castillo_farias.ui.screens
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.appmcmovilcare_castillo_farias.ui.theme.AppMCmovilCare_Castillo_FariasTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.appmcmovilcare_castillo_farias.data.local.entity.EquipoEntity
+import com.example.appmcmovilcare_castillo_farias.viewmodel.EquiposViewModel
 
 @Composable
 fun MisEquiposScreen(
     onVolver: () -> Unit = {},
-    onSolicitarAtencion: () -> Unit = {}
+    onSolicitarAtencion: () -> Unit = {},
+    equiposViewModel: EquiposViewModel = viewModel()
 ) {
-    // La barra superior compartida está en AppNavigation.
-    Scaffold { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Text(
-                text = "Mis equipos",
-                style = MaterialTheme.typography.headlineMedium
-            )
+    val estado by equiposViewModel.estado.collectAsStateWithLifecycle()
 
-            Text(
-                text = "Tus equipos registrados",
-                style = MaterialTheme.typography.titleLarge
-            )
-
-            Text(
-                text = "Datos ficticios para demostrar la navegación.",
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Card(
-                modifier = Modifier.fillMaxWidth()
+    when {
+        estado.cargando -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "Notebook Lenovo",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                CircularProgressIndicator()
+            }
+        }
 
-                    Text("Código: EQ001")
-                    Text("Estado: En revisión")
+        estado.error != null -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = estado.error ?: "Error al cargar",
+                    color = MaterialTheme.colorScheme.error
+                )
+
+                Button(
+                    onClick = equiposViewModel::cargarEquipos
+                ) {
+                    Text("Reintentar")
+                }
+
+                OutlinedButton(onClick = onVolver) {
+                    Text("Volver")
                 }
             }
+        }
 
-            Card(
-                modifier = Modifier.fillMaxWidth()
+        else -> {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                item {
                     Text(
-                        text = "Impresora Epson",
-                        style = MaterialTheme.typography.titleMedium
+                        text = "Mis equipos",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.padding(top = 16.dp)
                     )
-
-                    Text("Código: EQ002")
-                    Text("Estado: Disponible")
                 }
-            }
 
-            Button(
-                onClick = onSolicitarAtencion,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Solicitar atención")
-            }
+                item {
+                    Text(
+                        text = "Consulta el estado y diagnóstico de tus equipos.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
 
-            OutlinedButton(
-                onClick = onVolver,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Volver")
+                if (estado.equipos.isEmpty()) {
+                    item {
+                        Text("Todavía no tienes equipos registrados.")
+                    }
+                }
+
+                items(
+                    items = estado.equipos,
+                    key = { equipo -> equipo.id }
+                ) { equipo ->
+                    TarjetaEquipo(equipo = equipo)
+                }
+
+                item {
+                    Button(
+                        onClick = onSolicitarAtencion,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Solicitar atención")
+                    }
+                }
+
+                item {
+                    OutlinedButton(
+                        onClick = onVolver,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Text("Volver")
+                    }
+                }
             }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun MisEquiposScreenPreview() {
-    AppMCmovilCare_Castillo_FariasTheme {
-        MisEquiposScreen()
+private fun TarjetaEquipo(
+    equipo: EquipoEntity
+) {
+    var expandido by rememberSaveable(equipo.id) {
+        mutableStateOf(false)
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = equipo.nombre,
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            Text(
+                text = "${equipo.marca} · ${equipo.modelo}",
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Text(
+                text = "Estado: ${equipo.estado}",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            TextButton(
+                onClick = {
+                    expandido = !expandido
+                }
+            ) {
+                Text(
+                    text = if (expandido) {
+                        "Ocultar diagnóstico"
+                    } else {
+                        "Ver diagnóstico"
+                    }
+                )
+            }
+
+            AnimatedVisibility(visible = expandido) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Código: ${equipo.id}")
+                    Text("Serie: ${equipo.numeroSerie}")
+
+                    Text(
+                        text = "Diagnóstico",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Text(equipo.diagnostico)
+                }
+            }
+        }
     }
 }

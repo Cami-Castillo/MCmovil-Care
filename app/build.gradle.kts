@@ -1,6 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+
+    // Genera el código necesario para Room.
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -12,12 +15,15 @@ android {
 
     defaultConfig {
         applicationId = "com.example.appmcmovilcare_castillo_farias"
+
         minSdk = 24
         targetSdk = 37
+
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner =
+            "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -49,28 +55,59 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
-    // Iconos básicos, incluido el menú de tres rayas.
+    // Íconos para botones, formularios y navegación.
     implementation("androidx.compose.material:material-icons-core")
+    implementation("androidx.compose.material:material-icons-extended")
 
-    // Tamaño de ventana para adaptar el diseño.
-    implementation("androidx.compose.material3:material3-window-size-class")
+    // Diseño adaptable.
+    implementation(
+        "androidx.compose.material3:material3-window-size-class"
+    )
 
-    // Navegación entre pantallas.
-    implementation("androidx.navigation:navigation-compose:2.9.7")
+    // Navegación.
+    implementation(
+        "androidx.navigation:navigation-compose:2.9.7"
+    )
 
-    // ViewModel para Compose.
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+    // ViewModel y observación del estado.
+    implementation(
+        "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
+    )
+    implementation(
+        "androidx.lifecycle:lifecycle-runtime-compose:2.10.0"
+    )
 
-    // Observación del estado respetando el ciclo de vida.
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
+    // Animaciones.
+    implementation("androidx.compose.animation:animation")
 
+    // Base de datos local con Room.
+    implementation("androidx.room:room-runtime:2.8.4")
+    implementation("androidx.room:room-ktx:2.8.4")
+    ksp("androidx.room:room-compiler:2.8.4")
+
+    // Preferencias persistentes.
+    implementation(
+        "androidx.datastore:datastore-preferences:1.2.1"
+    )
+
+    // Visualización de imágenes.
+    implementation("io.coil-kt:coil-compose:2.7.0")
+
+    // Pruebas.
     testImplementation(libs.junit)
 
-    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(
+        platform(libs.androidx.compose.bom)
+    )
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+// Carpeta donde Room generará los esquemas de la base de datos.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
