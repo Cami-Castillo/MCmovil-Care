@@ -2,26 +2,12 @@ package com.example.appmcmovilcare_castillo_farias.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -34,7 +20,8 @@ import com.example.appmcmovilcare_castillo_farias.viewmodel.EquiposViewModel
 fun MisEquiposScreen(
     onVolver: () -> Unit = {},
     onSolicitarAtencion: () -> Unit = {},
-    equiposViewModel: EquiposViewModel = viewModel()
+    equiposViewModel: EquiposViewModel = viewModel(),
+    mostrarDiagnosticosInicialmente: Boolean = true
 ) {
     val estado by equiposViewModel.estado.collectAsStateWithLifecycle()
 
@@ -90,8 +77,7 @@ fun MisEquiposScreen(
 
                 item {
                     Text(
-                        text = "Consulta el estado y diagnóstico de tus equipos.",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = "Consulta el estado y diagnóstico de tus equipos."
                     )
                 }
 
@@ -103,9 +89,13 @@ fun MisEquiposScreen(
 
                 items(
                     items = estado.equipos,
-                    key = { equipo -> equipo.id }
+                    key = { it.id }
                 ) { equipo ->
-                    TarjetaEquipo(equipo = equipo)
+                    TarjetaEquipo(
+                        equipo = equipo,
+                        mostrarInicialmente =
+                            mostrarDiagnosticosInicialmente
+                    )
                 }
 
                 item {
@@ -134,10 +124,14 @@ fun MisEquiposScreen(
 
 @Composable
 private fun TarjetaEquipo(
-    equipo: EquipoEntity
+    equipo: EquipoEntity,
+    mostrarInicialmente: Boolean
 ) {
-    var expandido by rememberSaveable(equipo.id) {
-        mutableStateOf(false)
+    var expandido by rememberSaveable(
+        equipo.id,
+        mostrarInicialmente
+    ) {
+        mutableStateOf(mostrarInicialmente)
     }
 
     Card(
@@ -154,10 +148,7 @@ private fun TarjetaEquipo(
                 style = MaterialTheme.typography.titleLarge
             )
 
-            Text(
-                text = "${equipo.marca} · ${equipo.modelo}",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text("${equipo.marca} · ${equipo.modelo}")
 
             Text(
                 text = "Estado: ${equipo.estado}",
@@ -166,12 +157,10 @@ private fun TarjetaEquipo(
             )
 
             TextButton(
-                onClick = {
-                    expandido = !expandido
-                }
+                onClick = { expandido = !expandido }
             ) {
                 Text(
-                    text = if (expandido) {
+                    if (expandido) {
                         "Ocultar diagnóstico"
                     } else {
                         "Ver diagnóstico"

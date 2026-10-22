@@ -7,13 +7,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -22,10 +21,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.appmcmovilcare_castillo_farias.ui.HomeScreen
 import com.example.appmcmovilcare_castillo_farias.ui.screens.MisEquiposScreen
+import com.example.appmcmovilcare_castillo_farias.ui.screens.PreferenciasScreen
 import com.example.appmcmovilcare_castillo_farias.ui.screens.RegistroScreen
 import com.example.appmcmovilcare_castillo_farias.ui.screens.ResumenScreen
 import com.example.appmcmovilcare_castillo_farias.ui.screens.SolicitarAtencionScreen
 import com.example.appmcmovilcare_castillo_farias.viewmodel.NavigationViewModel
+import com.example.appmcmovilcare_castillo_farias.viewmodel.PreferenciasViewModel
 import com.example.appmcmovilcare_castillo_farias.viewmodel.UsuarioViewModel
 import kotlinx.coroutines.launch
 
@@ -34,31 +35,36 @@ import kotlinx.coroutines.launch
 fun AppNavigation(
     anchoVentana: WindowWidthSizeClass,
     navigationViewModel: NavigationViewModel = viewModel(),
-    usuarioViewModel: UsuarioViewModel = viewModel()
+    usuarioViewModel: UsuarioViewModel = viewModel(),
+    preferenciasViewModel: PreferenciasViewModel = viewModel()
 ) {
     val navController = rememberNavController()
     val lifecycleOwner = LocalLifecycleOwner.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    val currentEntry = navController.currentBackStackEntryAsState()
-    val currentRoute = currentEntry.value?.destination?.route
+    val currentEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentEntry?.destination?.route
+
+    val preferencias by preferenciasViewModel.estado
+        .collectAsStateWithLifecycle()
 
     val destinos = listOf(
         AppRoutes.Inicio to "Inicio",
         AppRoutes.MisEquipos to "Mis equipos",
         AppRoutes.SolicitarAtencion to "Solicitar atención",
-        AppRoutes.Registro to "Registro de usuario"
+        AppRoutes.Registro to "Registro de usuario",
+        AppRoutes.Preferencias to "Preferencias"
     )
 
-    // Recibe los eventos enviados por NavigationViewModel.
     LaunchedEffect(navController, lifecycleOwner, navigationViewModel) {
-        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(
+            Lifecycle.State.STARTED
+        ) {
             navigationViewModel.navigationEvents.collect { event ->
                 when (event) {
                     is NavigationEvent.NavigateTo -> {
                         navController.navigate(event.destination.route) {
-                            // El resumen conserva el formulario detrás.
                             if (event.destination != AppRoutes.Resumen) {
                                 popUpTo(AppRoutes.Inicio.route) {
                                     inclusive = false
@@ -91,9 +97,7 @@ fun AppNavigation(
 
                 destinos.forEach { (destino, titulo) ->
                     NavigationDrawerItem(
-                        label = {
-                            Text(titulo)
-                        },
+                        label = { Text(titulo) },
                         selected = currentRoute == destino.route ||
                                 (
                                         destino == AppRoutes.Registro &&
@@ -114,13 +118,10 @@ fun AppNavigation(
             }
         }
     ) {
-        // Barra superior compartida por todas las pantallas.
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = {
-                        Text("MCmovil Care")
-                    },
+                    title = { Text("MCmovil Care") },
                     navigationIcon = {
                         IconButton(
                             onClick = {
@@ -131,14 +132,15 @@ fun AppNavigation(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Menu,
-                                contentDescription = "Abrir menú",
-                                tint = MaterialTheme.colorScheme.onPrimary
+                                contentDescription = "Abrir menú"
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimary
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor =
+                            MaterialTheme.colorScheme.onPrimary
                     )
                 )
             }
@@ -155,7 +157,9 @@ fun AppNavigation(
                     HomeScreen(
                         anchoVentana = anchoVentana,
                         onMisEquipos = {
-                            navigationViewModel.navegarA(AppRoutes.MisEquipos)
+                            navigationViewModel.navegarA(
+                                AppRoutes.MisEquipos
+                            )
                         },
                         onSolicitarAtencion = {
                             navigationViewModel.navegarA(
@@ -166,16 +170,28 @@ fun AppNavigation(
                 }
 
                 composable(AppRoutes.MisEquipos.route) {
-                    MisEquiposScreen(
-                        onVolver = {
-                            navigationViewModel.volver()
-                        },
-                        onSolicitarAtencion = {
-                            navigationViewModel.navegarA(
-                                AppRoutes.SolicitarAtencion
-                            )
+                    if (preferencias.cargando) {
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment =
+                                androidx.compose.ui.Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
                         }
-                    )
+                    } else {
+                        MisEquiposScreen(
+                            onVolver = {
+                                navigationViewModel.volver()
+                            },
+                            onSolicitarAtencion = {
+                                navigationViewModel.navegarA(
+                                    AppRoutes.SolicitarAtencion
+                                )
+                            },
+                            mostrarDiagnosticosInicialmente =
+                                preferencias.mostrarDiagnosticos
+                        )
+                    }
                 }
 
                 composable(AppRoutes.SolicitarAtencion.route) {
@@ -184,7 +200,9 @@ fun AppNavigation(
                             navigationViewModel.navegarA(AppRoutes.Inicio)
                         },
                         onMisEquipos = {
-                            navigationViewModel.navegarA(AppRoutes.MisEquipos)
+                            navigationViewModel.navegarA(
+                                AppRoutes.MisEquipos
+                            )
                         },
                         onVolver = {
                             navigationViewModel.volver()
@@ -192,7 +210,6 @@ fun AppNavigation(
                     )
                 }
 
-                // Ambas pantallas reciben la misma instancia.
                 composable(AppRoutes.Registro.route) {
                     RegistroScreen(
                         usuarioViewModel = usuarioViewModel,
@@ -210,6 +227,15 @@ fun AppNavigation(
                         },
                         onInicio = {
                             navigationViewModel.navegarA(AppRoutes.Inicio)
+                        }
+                    )
+                }
+
+                composable(AppRoutes.Preferencias.route) {
+                    PreferenciasScreen(
+                        preferenciasViewModel = preferenciasViewModel,
+                        onVolver = {
+                            navigationViewModel.volver()
                         }
                     )
                 }
