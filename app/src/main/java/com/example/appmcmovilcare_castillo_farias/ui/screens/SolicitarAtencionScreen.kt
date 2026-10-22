@@ -21,6 +21,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.appmcmovilcare_castillo_farias.ui.components.AdjuntoImagen
+import com.example.appmcmovilcare_castillo_farias.ui.components.ImagenSolicitud
 import com.example.appmcmovilcare_castillo_farias.validation.SolicitudValidator
 import com.example.appmcmovilcare_castillo_farias.viewmodel.SolicitudViewModel
 import java.text.SimpleDateFormat
@@ -35,6 +37,7 @@ fun SolicitarAtencionScreen(
     solicitudViewModel: SolicitudViewModel = viewModel()
 ) {
     val estado by solicitudViewModel.estado.collectAsStateWithLifecycle()
+    val ocupado = estado.guardando || estado.procesandoImagen
 
     when {
         estado.cargando -> {
@@ -93,8 +96,8 @@ fun SolicitarAtencionScreen(
 
                 item {
                     Text(
-                        "Cuéntanos qué necesita tu equipo. " +
-                                "Esta demostración guarda la solicitud en el dispositivo."
+                        "Describe lo que necesita tu equipo. " +
+                                "Esta demostración guarda los datos en el dispositivo."
                     )
                 }
 
@@ -127,7 +130,7 @@ fun SolicitarAtencionScreen(
                             it.id to "${it.nombre} · ${it.id}"
                         },
                         error = estado.errores.equipo,
-                        habilitado = !estado.guardando,
+                        habilitado = !ocupado,
                         icono = {
                             Icon(
                                 Icons.Default.Computer,
@@ -146,7 +149,7 @@ fun SolicitarAtencionScreen(
                             it to it
                         },
                         error = estado.errores.servicio,
-                        habilitado = !estado.guardando,
+                        habilitado = !ocupado,
                         icono = {
                             Icon(
                                 Icons.Default.Build,
@@ -162,10 +165,10 @@ fun SolicitarAtencionScreen(
                         value = estado.descripcion,
                         onValueChange =
                             solicitudViewModel::cambiarDescripcion,
-                        enabled = !estado.guardando,
+                        enabled = !ocupado,
                         label = { Text("Descripción del problema") },
                         placeholder = {
-                            Text("Ejemplo: el equipo no enciende al conectarlo.")
+                            Text("Ejemplo: el equipo no enciende.")
                         },
                         leadingIcon = {
                             Icon(
@@ -199,7 +202,7 @@ fun SolicitarAtencionScreen(
                     OutlinedTextField(
                         value = estado.correo,
                         onValueChange = solicitudViewModel::cambiarCorreo,
-                        enabled = !estado.guardando,
+                        enabled = !ocupado,
                         label = { Text("Correo de contacto") },
                         leadingIcon = {
                             Icon(
@@ -231,6 +234,18 @@ fun SolicitarAtencionScreen(
                 }
 
                 item {
+                    AdjuntoImagen(
+                        imagenRuta = estado.imagenRuta,
+                        procesando = estado.procesandoImagen,
+                        habilitado = !estado.guardando,
+                        error = estado.errorImagen,
+                        onAdjuntar = solicitudViewModel::adjuntarImagen,
+                        onQuitar = solicitudViewModel::quitarImagen,
+                        onError = solicitudViewModel::mostrarErrorImagen
+                    )
+                }
+
+                item {
                     estado.errorGuardado?.let {
                         Text(
                             text = it,
@@ -240,7 +255,7 @@ fun SolicitarAtencionScreen(
 
                     Button(
                         onClick = solicitudViewModel::enviarSolicitud,
-                        enabled = !estado.guardando &&
+                        enabled = !ocupado &&
                                 estado.equipos.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -296,10 +311,7 @@ fun SolicitarAtencionScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
 
-                            Text(
-                                equipo?.nombre ?: solicitud.equipoId
-                            )
-
+                            Text(equipo?.nombre ?: solicitud.equipoId)
                             Text(solicitud.tipoServicio)
 
                             Text(
@@ -334,6 +346,10 @@ fun SolicitarAtencionScreen(
                                     Text(
                                         "Contacto: ${solicitud.correoContacto}"
                                     )
+
+                                    solicitud.imagenRuta?.let {
+                                        ImagenSolicitud(nombreArchivo = it)
+                                    }
                                 }
                             }
                         }
@@ -343,7 +359,7 @@ fun SolicitarAtencionScreen(
                 item {
                     OutlinedButton(
                         onClick = onMisEquipos,
-                        enabled = !estado.guardando,
+                        enabled = !ocupado,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Mis equipos")
@@ -351,7 +367,7 @@ fun SolicitarAtencionScreen(
 
                     OutlinedButton(
                         onClick = onInicio,
-                        enabled = !estado.guardando,
+                        enabled = !ocupado,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Inicio")
@@ -359,7 +375,7 @@ fun SolicitarAtencionScreen(
 
                     TextButton(
                         onClick = onVolver,
-                        enabled = !estado.guardando,
+                        enabled = !ocupado,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Volver")
@@ -401,7 +417,6 @@ private fun SelectorSolicitud(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 icono()
-
                 Spacer(Modifier.width(8.dp))
 
                 Text(
