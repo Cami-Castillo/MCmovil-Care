@@ -31,7 +31,7 @@ fun HomeCompactScreen(
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Image(
-            painter = painterResource(R.drawable.ic_launcher_foreground),
+            painter = painterResource(R.drawable.logo_mcmovil),
             contentDescription = "Imagen de MCmovil Care",
             modifier = Modifier.size(100.dp)
         )

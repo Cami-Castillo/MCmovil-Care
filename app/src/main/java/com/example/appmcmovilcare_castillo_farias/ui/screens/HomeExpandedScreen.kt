@@ -36,7 +36,7 @@ fun HomeExpandedScreen(
         ) {
             Image(
                 painter = painterResource(
-                    R.drawable.ic_launcher_foreground
+                    R.drawable.logo_mcmovil
                 ),
                 contentDescription = "Imagen de MCmovil Care",
                 modifier = Modifier.size(200.dp)
